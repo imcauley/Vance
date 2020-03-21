@@ -5,6 +5,8 @@ data Lam a = App (Lam a) (Lam a)
            | Var a
            | Const Int
            | Func (Int -> Int -> Int) (Lam a) (Lam a)
+           | LBool Bool
+        
 
 
 data DeBru a = DBApp (DeBru a) (DeBru a)
@@ -83,8 +85,8 @@ evaluateTerm l = do
     let 
         deBru = lambdaToDeBru l []
         code  = (deBruToMacCode deBru)
-        result = evaluate code
-    putStrLn (macCodeToString result)
+        result = evaluateWithPrint (code, [], [])
+    return result
 
 
 evaluate :: [MacCode a] -> (MacCode a)
@@ -96,6 +98,14 @@ evaluate' start
     | otherwise = (evaluate' (c',env,stack))
     where (c',env,stack) = (codeStep start)
 
+-- evaluate :: EvalState a -> (MacCode a)
+evaluateWithPrint start
+    | length c' == 0  = macCodeToString (head stack)
+    | otherwise = macStackString c' ++ "\n" ++ (evaluateWithPrint (c',env,stack))
+    where (c',env,stack) = (codeStep start)
+
+
+
 codeStep :: EvalState a -> EvalState a
 codeStep (c:cs, env, stack) = 
     case c of
@@ -105,13 +115,9 @@ codeStep (c:cs, env, stack) =
         (Clo c) -> (cs, env, [(CloEnv c env)] ++ stack)
         (Acc n) -> (cs, env, [(env !! n)] ++ stack)
         (Ret)   -> (cs, fst (upackReturn stack), snd (upackReturn stack))
-        -- (MacFunc f) -> (applyFunction f cs env stack)
+        (MacFunc f) -> (applyFunction f cs env stack)
 
 applyFunction f cs env ((MacConst n):(MacConst m):stack) = (cs, env, (MacConst (f n m)):stack)
-applyFunction f cs env ((MacConst n):(MacVar m):stack) = (cs, env, (MacConst (f n m)):stack)
-applyFunction f cs env ((MacVar n):(MacConst m):stack) = (cs, env, (MacConst (f n m)):stack)
-applyFunction f cs env ((MacVar n):(MacVar m):stack) = (cs, env, (MacConst (f n m)):stack)
-
 
 upackReturn :: [(MacCode a)] -> ([MacCode a], [MacCode a])
 upackReturn (v:(CloEnv e s):_) = (e,v:s)
@@ -119,7 +125,17 @@ upackReturn (v:(CloEnv e s):_) = (e,v:s)
 unpackApplication :: EvalState a -> EvalState a
 unpackApplication (cs, env, ((CloEnv cs' env'):v:rest)) = (cs', (v:env'), (CloEnv cs env):rest)
 
-macCodeToString (MacConst c) = show c
+macCodeToString :: Show a => MacCode a -> String
+macCodeToString (MacApp)     = "[App]"
+macCodeToString (Ret)        = "[Return]"
+macCodeToString (Acc n)      = "[Access " ++ show n ++ " ]"
+macCodeToString (MacVar v)   = "[Var " ++ show v ++ " ]"
+macCodeToString (MacConst c) = "[Const " ++ show c ++ " ]"
+macCodeToString (CloEnv e s) = "[Closure E: " ++ concat (map macCodeToString e) ++ concat (map macCodeToString s) ++ " ]"
+macCodeToString (Clo s)      = "[Closure S: " ++ concat (map macCodeToString s) ++ " ]"
+macCodeToString (MacFunc f)  = "[Func]"
+
+macStackString s = concat (map macCodeToString s)
 
 lambdaToString (Var a) = show a
 lambdaToString (Abst a l) = "λ" ++ show a ++ "." ++ (lambdaToString l)
