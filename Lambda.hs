@@ -6,17 +6,17 @@ data Lam a = App (Lam a) (Lam a)
            | Const Int
            | Func (Int -> Int -> Int) (Lam a) (Lam a)
            | LBool Bool
-        
+           | BFunc (Int -> Int -> Bool) (Lam a) (Lam a)
+           | IfThenElse (Lam a) (Lam a) (Lam a)
+
 
 
 data DeBru a = DBApp (DeBru a) (DeBru a)
              | DBAbst (DeBru a)
              | DBVar a
              | DBRef Int
-            --  | DBNum Int
              | DBConst Int
              | DBFunc (Int -> Int -> Int) (DeBru a) (DeBru a)
-            --  deriving (Show)
 
 data MacCode a = MacApp
              | Acc Int
@@ -40,7 +40,11 @@ type EvalState a = ([MacCode a], [MacCode a], [MacCode a])
 omega = App (Abst "x" (App (Var "x") (Var "x"))) (Abst "x" (App (Var "x") (Var "x")))
 
 
-addTest = (App (Abst "x" (Func (\x y -> x + y) (Var "x") (Const 1))) (Const 2))
+addOne = App (Abst "x" (Func (\x y -> x + y) (Var "x") (Const 1))) -- Const (n)
+
+-- λf.(λa.f (λx.a a x)) (λa.f (λx.a a x))
+
+y = (Abst "f" (App (Abst "a" (App (Var "f") (Abst "x" (App (App (Var "a") (Var "a")) (Var "x"))))) (Abst "a" (App (Var "f") (Abst "x" (App (App (Var "a") (Var "a")) (Var "x"))))) ))
 
 --------------------------------------------------
 -- Lambda to de Buijn Conversion
