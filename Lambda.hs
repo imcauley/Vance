@@ -55,14 +55,54 @@ omega = App (Abst "x" (App (Var "x") (Var "x"))) (Abst "x" (App (Var "x") (Var "
 addOne = App (Abst "x" (Func (\x y -> x + y) (Var "x") (Const 1))) -- Const (n)
 chooseOne = App (Abst "x" (IfThenElse (Var "x") (Const 1) (Const 2))) (LBool False)
 
--- fact f n = y (if (n == 0) (1) (n * (f (n - 1))))
 
--- fact = App y (IfThenElse (\x y ))
+fact = App (App y 
+  (Abst "f" 
+    (Abst "i" 
+      (IfThenElse 
+        (BFunc (\n m -> n == m) (Const 0) (Var "i")) 
+        (Const 1) 
+        (Func (\n m -> n * m)
+          (Var "i")
+          (App 
+            (Var "f")
+            (Func (\n m -> n - m)
+              (Var "i")
+              (Const 1)
+            )
+            )
+        )
+      )
+    )
+  ))
 
+
+if_test = App ((Abst "n" (IfThenElse (BFunc (\n m -> n == m) (Const 0) (Var "n")) (Const 1) (Const 2))))
+comb_text = App y (Abst "f" (Const 1))
+
+greater = App (App (Abst "x" (Abst "y" 
+  (IfThenElse
+    (BFunc (\x y -> x > y) (Var "x") (Var "y"))
+    (Var "x")
+    (Var "y")
+  ))) (Const 2)) (Const 4)
+
+first_one = App (App (Abst "x" (Abst "y" (Var ("x")))) (Const 3)) (Const 4)
+
+first_one_d = DBApp (DBApp (DBAbst (DBAbst (DBRef 1))) (DBConst 3)) (DBConst 4)
 
 -- λf.(λa.f (λx.a a x)) (λa.f (λx.a a x))
 
-y = (Abst "f" (App (Abst "a" (App (Var "f") (Abst "x" (App (App (Var "a") (Var "a")) (Var "x"))))) (Abst "a" (App (Var "f") (Abst "x" (App (App (Var "a") (Var "a")) (Var "x"))))) ))
+y = (Abst "f" 
+  (App (Abst "a" 
+    (App (Var "f") 
+      (Abst "x" (App (App (Var "a") (Var "a")) (Var "x")))
+    )) 
+  (Abst "a" 
+    (App (Var "f") 
+      (Abst "x" (App (App (Var "a") (Var "a")) (Var "x"))))
+   )
+  ))
 
 --------------------------------------------------
 -- Lambda to de Buijn Conversion
@@ -147,7 +187,7 @@ codeStep (c:cs, env, stack) =
         (MacApp)   -> unpackApplication (cs, env, stack)
         (Clo c) -> (cs, env, [(CloEnv c env)] ++ stack)
         (Acc n) -> (cs, env, [(env !! n)] ++ stack)
-        (Ret)   -> (cs, fst (upackReturn stack), snd (upackReturn stack))
+        (Ret)   -> (applyReturn cs env stack)
         (MacFunc f) -> (applyFunction f cs env stack)
         (MBFunc f) -> (applyBoolFunc f cs env stack)
         (MBool b) -> (cs, env, [MBool b] ++ stack)
@@ -162,7 +202,7 @@ applyBoolFunc f cs env ((MacConst n):(MacConst m):stack) = (cs, env, (MBool (f n
 applyIf c1 c2 cs env ((MBool True):stack)  = (c1, env, [CloEnv cs env] ++ stack)
 applyIf c1 c2 cs env ((MBool False):stack) = (c2, env, [CloEnv cs env] ++ stack)
 
-upackReturn (v:(CloEnv e s):_) = (e,v:s)
+applyReturn cs env (v:(CloEnv cs' env'):stack) = (cs', env', v:stack)
 
 unpackApplication (cs, env, ((CloEnv cs' env'):v:rest)) = (cs', (v:env'), (CloEnv cs env):rest)
 
@@ -178,6 +218,15 @@ macCodeToString (MacFunc f)  = "[Func]"
 
 macStackString s = concat (map macCodeToString s)
 
-lambdaToString (Var a) = show a
-lambdaToString (Abst a l) = "λ" ++ show a ++ "." ++ (lambdaToString l)
-lambdaToString (App l1 l2) = "(" ++ (lambdaToString l1) ++ ")(" ++ (lambdaToString l1) ++ ")"
+
+printDeBru d = putStrLn (printDeBru' d)
+
+printDeBru' (DBRef n) = "a" ++ (show n)
+printDeBru' (DBVar v) = show v
+printDeBru' (DBAbst e) = "λ." ++ (printDeBru' e)
+printDeBru' (DBApp e1 e2) = "(" ++ (printDeBru' e1) ++ ")(" ++ (printDeBru' e2) ++ ")"
+printDeBru' (DBConst c) = show c
+printDeBru' (DBFunc f n m) = "func(" ++ (printDeBru' n) ++ ", " ++ (printDeBru' m) ++ ")"
+printDeBru' (DBBFunc f n m) = "func(" ++ (printDeBru' n) ++ ", " ++ (printDeBru' m) ++ ")"
+printDeBru' (DBBool b) = show b
+printDeBru' (DBIf e1 e2 e3) = "if (" ++ (printDeBru' e1) ++ ") then (" ++ (printDeBru' e2) ++ ") else (" ++ (printDeBru' e3) ++ ")"
