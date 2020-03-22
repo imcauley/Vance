@@ -1,5 +1,9 @@
--- import Control.Monad.State
-
+--------------------------------------------------
+-- Isaac McAuley
+-- 30062463
+-- March 23, 2020
+-- Lambda.hs
+--------------------------------------------------
 data Lam a = App (Lam a) (Lam a)
            | Abst a (Lam a)
            | Var a
