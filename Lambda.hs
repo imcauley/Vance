@@ -49,13 +49,16 @@ type EvalState a = ([MacCode a], [MacCode a], [MacCode a])
 -- Premade Functions
 --------------------------------------------------
 
+-- loops infinitely
 omega = App (Abst "x" (App (Var "x") (Var "x"))) (Abst "x" (App (Var "x") (Var "x")))
 
-
+-- adds one to a constant
 addOne = App (Abst "x" (Func (\x y -> x + y) (Var "x") (Const 1))) -- Const (n)
-chooseOne = App (Abst "x" (IfThenElse (Var "x") (Const 1) (Const 2))) (LBool False)
 
+-- chooses out of two constants
+chooseOne = App (Abst "x" (IfThenElse (Var "x") (Const 1) (Const 2))) -- (LBool b)
 
+-- factorial 
 fact = App (App y 
   (Abst "f" 
     (Abst "i" 
@@ -74,12 +77,15 @@ fact = App (App y
         )
       )
     )
-  ))
+  )) -- (Const n)
 
-
+-- checks if number is equal to 0
 if_test = App ((Abst "n" (IfThenElse (BFunc (\n m -> n == m) (Const 0) (Var "n")) (Const 1) (Const 2))))
+
+-- tests if fixed point combinator returns itself
 comb_text = App y (Abst "f" (Const 1))
 
+-- returns the greater of two numbers
 greater = App (App (Abst "x" (Abst "y" 
   (IfThenElse
     (BFunc (\x y -> x > y) (Var "x") (Var "y"))
@@ -87,12 +93,13 @@ greater = App (App (Abst "x" (Abst "y"
     (Var "y")
   ))) (Const 2)) (Const 4)
 
+
+-- chooses first of two number
 first_one = App (App (Abst "x" (Abst "y" (Var ("x")))) (Const 3)) (Const 4)
 
-first_one_d = DBApp (DBApp (DBAbst (DBAbst (DBRef 1))) (DBConst 3)) (DBConst 4)
 
+-- Special Fixed Point Combinator
 -- λf.(λa.f (λx.a a x)) (λa.f (λx.a a x))
-
 y = (Abst "f" 
   (App (Abst "a" 
     (App (Var "f") 
